@@ -1,4 +1,3 @@
-//not displaying on simulator!
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 
@@ -9,7 +8,7 @@ class SettingsScreen extends StatefulWidget {
   final String cycleLength;
   final DateTime dateOfBirth;
   final DateTime lastPeriodDate;
-  
+
   const SettingsScreen({
     super.key,
     this.name,
@@ -26,41 +25,41 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers for editable fields
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _currentPasswordController;
   late TextEditingController _newPasswordController;
   late TextEditingController _confirmPasswordController;
-  
+
   // State variables
   late DateTime _selectedDateOfBirth;
-  
+
   // Password visibility toggles
   bool _isCurrentPasswordVisible = false;
   bool _isNewPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  
+
   // Editing mode flags
   bool _editingPersonalInfo = false;
   bool _changingPassword = false;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize controllers with current values
     _nameController = TextEditingController(text: widget.name ?? '');
     _emailController = TextEditingController(text: widget.email ?? '');
     _currentPasswordController = TextEditingController();
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
-    
+
     // Initialize other state variables
     _selectedDateOfBirth = widget.dateOfBirth;
   }
-  
+
   @override
   void dispose() {
     // Clean up controllers
@@ -76,16 +75,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:const Text('Settings'),
+        title: const Text('Settings'),
         leading: IconButton(
-          icon:const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
       ),
       body: SingleChildScrollView(
-        padding:const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -94,9 +93,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // Account Information Section
               _buildSectionHeader('Account Information'),
               _buildPersonalInfoSection(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Password Change Section
               _buildSectionHeader('Security'),
               _buildPasswordSection(),
@@ -106,7 +105,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -120,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   Widget _buildPersonalInfoSection() {
     return Card(
       elevation: 2,
@@ -143,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Email field
             TextFormField(
               controller: _emailController,
@@ -162,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             // Date of Birth
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -188,12 +187,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                         child: Text(
                           '${_selectedDateOfBirth.day}/${_selectedDateOfBirth.month}/${_selectedDateOfBirth.year}',
-                          style:const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       )
                     : Text(
                         '${_selectedDateOfBirth.day}/${_selectedDateOfBirth.month}/${_selectedDateOfBirth.year}',
-                        style:const TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -205,7 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (_editingPersonalInfo) 
+                if (_editingPersonalInfo)
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -216,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _editingPersonalInfo = false;
                       });
                     },
-                    child:const Text('Cancel'),
+                    child: const Text('Cancel'),
                   ),
                 const SizedBox(width: 8),
                 ElevatedButton(
@@ -226,7 +225,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (_formKey.currentState!.validate()) {
                         // save the data to backend/database
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Personal information updated')),
+                          const SnackBar(
+                              content: Text('Personal information updated')),
                         );
                         setState(() {
                           _editingPersonalInfo = false;
@@ -261,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   Widget _buildPasswordSection() {
     return Card(
       elevation: 2,
@@ -277,10 +277,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _changingPassword = true;
                   });
                 },
-                icon:const Icon(Icons.lock),
-                label:const Text('Change Password'),
+                icon: const Icon(Icons.lock),
+                label: const Text('Change Password'),
               ),
-            
             if (_changingPassword) ...[
               // Current Password
               TextFormField(
@@ -290,7 +289,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   labelText: 'Current Password',
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _isCurrentPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      _isCurrentPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -307,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               // New Password
               TextFormField(
                 controller: _newPasswordController,
@@ -316,7 +317,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   labelText: 'New Password',
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _isNewPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      _isNewPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -336,7 +339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               // Confirm New Password
               TextFormField(
                 controller: _confirmPasswordController,
@@ -345,7 +348,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   labelText: 'Confirm New Password',
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      _isConfirmPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -365,7 +370,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              
+
               // Save/Cancel buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -379,7 +384,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _confirmPasswordController.clear();
                       });
                     },
-                    child:const Text('Cancel'),
+                    child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
@@ -387,7 +392,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (_formKey.currentState!.validate()) {
                         // Here you would update the password in your backend/database
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Password updated successfully')),
+                          const SnackBar(
+                              content: Text('Password updated successfully')),
                         );
                         setState(() {
                           _changingPassword = false;
@@ -397,7 +403,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         });
                       }
                     },
-                    child:const Text('Update Password'),
+                    child: const Text('Update Password'),
                   ),
                 ],
               ),

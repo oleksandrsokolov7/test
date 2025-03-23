@@ -1,11 +1,14 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import 'package:my_period_tracker/widgets/phase_card.dart';
+import 'package:my_period_tracker/widgets/symptoms_card.dart';
+import 'package:my_period_tracker/widgets/log_change_button.dart';
+import 'package:my_period_tracker/widgets/add_symptoms_button.dart';
+import 'package:my_period_tracker/widgets/account_options.dart';
+import 'package:my_period_tracker/widgets/predicted_symptoms_section.dart';
 import 'calendar_view_screen.dart';
-import 'symptoms_screen.dart';
-import 'settings_screen.dart';
 import 'cycle_progress_widget.dart';
 import 'cycle_utils.dart';
-import 'dashboard_dialogs.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? name;
@@ -14,8 +17,8 @@ class DashboardScreen extends StatefulWidget {
   final String cycleLength;
   final DateTime dateOfBirth;
   final DateTime lastPeriodDate;
-  final List<String>? loggedSymptoms; // Add a parameter for logged symptoms
-  final String? symptomNotes; // Add a parameter for symptom notes
+  final List<String>? loggedSymptoms;
+  final String? symptomNotes;
 
   const DashboardScreen({
     super.key,
@@ -35,12 +38,18 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
-  int _selectedIndex = 1; // Start with home/dashboard selected
+  void _handleSymptomsUpdate(List<String> newSymptoms, String? newNotes) {
+    setState(() {
+      _loggedSymptoms = newSymptoms;
+      _symptomNotes = newNotes;
+    });
+  }
+
+  int _selectedIndex = 1;
   bool _showCalendar = false;
   late AnimationController _animationController;
   late Animation<double> _animation;
 
-  // Store logged symptoms locally
   List<String>? _loggedSymptoms;
   String? _symptomNotes;
 
@@ -55,7 +64,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
     _animationController.forward();
 
-    // Initialize symptoms from widget parameters
     _loggedSymptoms = widget.loggedSymptoms;
     _symptomNotes = widget.symptomNotes;
   }
@@ -68,23 +76,19 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Parse period and cycle length as integers
     final int periodLengthDays =
         int.tryParse(widget.periodLength.split(' ').first) ?? 5;
     final int cycleLengthDays =
         int.tryParse(widget.cycleLength.split(' ').first) ?? 28;
 
-    // Calculate next period start date based on last period and cycle length
     final DateTime today = DateTime.now();
 
-    // Calculate next period start date
     DateTime nextPeriodStartDate = widget.lastPeriodDate;
     while (nextPeriodStartDate.isBefore(today)) {
       nextPeriodStartDate =
           nextPeriodStartDate.add(Duration(days: cycleLengthDays));
     }
 
-    // Calculate previous period start date
     DateTime previousPeriodStartDate = widget.lastPeriodDate;
     while (previousPeriodStartDate.isAfter(today) ||
         previousPeriodStartDate == today) {
@@ -92,32 +96,25 @@ class _DashboardScreenState extends State<DashboardScreen>
           previousPeriodStartDate.subtract(Duration(days: cycleLengthDays));
     }
 
-    // Calculate fertile window (typically 5 days before ovulation and ovulation day)
     final DateTime ovulationDate =
         nextPeriodStartDate.subtract(const Duration(days: 14));
     final DateTime fertileWindowStart =
         ovulationDate.subtract(const Duration(days: 5));
     final DateTime fertileWindowEnd = ovulationDate;
 
-    // Calculate days until next period
     final int daysUntilNextPeriod =
         nextPeriodStartDate.difference(today).inDays;
-    // Calculate days until or since ovulation
     final int daysUntilOvulation = ovulationDate.difference(today).inDays;
 
-    // Calculate if currently in period
     final bool isInPeriod =
         today.difference(previousPeriodStartDate).inDays < periodLengthDays;
 
-    // Calculate if currently in fertile window
     final bool isInFertileWindow =
         today.isAfter(fertileWindowStart.subtract(const Duration(days: 1))) &&
             today.isBefore(fertileWindowEnd.add(const Duration(days: 1)));
 
-    // Calculate cycle day
     final int cycleDay = today.difference(previousPeriodStartDate).inDays + 1;
 
-    // Calculate current cycle phase
     final phaseData = CycleUtils.calculateCyclePhase(
       cycleDay: cycleDay,
       isInPeriod: isInPeriod,
@@ -132,24 +129,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       body: SafeArea(
         child: _showCalendar
-            ?
-            // Calendar view when calendar is shown
-            CalendarView(
+            ? CalendarView(
                 cycleLengthDays: cycleLengthDays,
                 periodLengthDays: periodLengthDays,
                 lastPeriodDate: widget.lastPeriodDate,
                 onPeriodDateChanged: (newDate) {
-                  // Handle the period date change
                   _handlePeriodDateUpdate(newDate);
                 },
               )
-            :
-            // Main dashboard view
-            SingleChildScrollView(
+            : SingleChildScrollView(
                 child: Column(
                   children: [
                     const SizedBox(height: 24),
-                    // Current date display
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
@@ -174,8 +165,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Menstrual cycle visualization
                     AnimatedBuilder(
                         animation: _animation,
                         builder: (context, child) {
@@ -191,39 +180,41 @@ class _DashboardScreenState extends State<DashboardScreen>
                           );
                         }),
                     const SizedBox(height: 20),
-
-                    // Current phase card
-                    _buildPhaseCard(
-                        context,
-                        currentPhase,
-                        phaseColor,
-                        isInPeriod,
-                        isInFertileWindow,
-                        periodLengthDays,
-                        today,
-                        previousPeriodStartDate,
-                        fertileWindowEnd,
-                        daysUntilNextPeriod,
-                        daysUntilOvulation),
-
-                    // Display logged symptoms if available
+                    PhaseCard(
+                      currentPhase: currentPhase,
+                      phaseColor: phaseColor,
+                      isInPeriod: isInPeriod,
+                      isInFertileWindow: isInFertileWindow,
+                      periodLengthDays: periodLengthDays,
+                      today: today,
+                      previousPeriodStartDate: previousPeriodStartDate,
+                      fertileWindowEnd: fertileWindowEnd,
+                      daysUntilNextPeriod: daysUntilNextPeriod,
+                      daysUntilOvulation: daysUntilOvulation,
+                    ),
                     if (_loggedSymptoms != null && _loggedSymptoms!.isNotEmpty)
-                      _buildSymptomsCard(context, phaseColor),
+                      SymptomsCard(
+                        loggedSymptoms: _loggedSymptoms!,
+                        symptomNotes: _symptomNotes,
+                        phaseColor: phaseColor,
+                      ),
                     const SizedBox(height: 20),
-
-                    // Log/Change Button
-                    _buildLogChangeButton(
-                        context, phaseColor, previousPeriodStartDate),
-
-                    // Add symptoms button for period view
+                    LogChangeButton(
+                      phaseColor: phaseColor,
+                      previousPeriodStartDate: previousPeriodStartDate,
+                      onPeriodDateUpdate: _handlePeriodDateUpdate,
+                    ),
                     if (isInPeriod)
-                      _buildAddSymptomsButton(context, phaseColor),
-
-                    // Predicted symptoms for non-period phases when no symptoms are logged
+                      AddSymptomsButton(
+                        phaseColor: phaseColor,
+                        onSymptomsUpdate: _handleSymptomsUpdate,
+                      ),
                     if (!isInPeriod &&
                         (_loggedSymptoms == null || _loggedSymptoms!.isEmpty))
-                      _buildPredictedSymptomsSection(
-                          context, currentPhase, phaseColor),
+                      PredictedSymptomsSection(
+                        currentPhase: currentPhase,
+                        phaseColor: phaseColor,
+                      ),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -242,8 +233,15 @@ class _DashboardScreenState extends State<DashboardScreen>
             } else if (index == 1) {
               _showCalendar = false;
             } else if (index == 2) {
-              // Show account options
-              _showAccountOptions(context);
+              showAccountOptions(
+                context,
+                widget.name,
+                widget.email,
+                widget.periodLength,
+                widget.cycleLength,
+                widget.dateOfBirth,
+                widget.lastPeriodDate,
+              );
             }
           });
         },
@@ -265,449 +263,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // Build the phase information card
-  Widget _buildPhaseCard(
-      BuildContext context,
-      String currentPhase,
-      Color phaseColor,
-      bool isInPeriod,
-      bool isInFertileWindow,
-      int periodLengthDays,
-      DateTime today,
-      DateTime previousPeriodStartDate,
-      DateTime fertileWindowEnd,
-      int daysUntilNextPeriod,
-      int daysUntilOvulation) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: phaseColor,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    currentPhase,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: phaseColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                CycleUtils.getPhaseDescription(currentPhase),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 16),
-              isInPeriod
-                  ? _buildInfoRow('Period ends in',
-                      '${periodLengthDays - today.difference(previousPeriodStartDate).inDays} days')
-                  : isInFertileWindow
-                      ? _buildInfoRow('Fertile window ends in',
-                          '${fertileWindowEnd.difference(today).inDays + 1} days')
-                      : _buildInfoRow(
-                          'Next period begin in', '$daysUntilNextPeriod days'),
-              const SizedBox(height: 8),
-              _buildInfoRow(
-                  'Next ovulation will start in', '$daysUntilOvulation days'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Build a row with label and value
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Build the symptoms card
-  Widget _buildSymptomsCard(BuildContext context, Color phaseColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.medical_information,
-                    color: phaseColor,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Your Logged Symptoms',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: phaseColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _loggedSymptoms!.map((symptom) {
-                  return Chip(
-                    label: Text(symptom),
-                    backgroundColor: phaseColor.withAlpha(51),
-                    side: BorderSide(color: phaseColor.withAlpha(128)),
-                  );
-                }).toList(),
-              ),
-              if (_symptomNotes != null && _symptomNotes!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                const Text(
-                  'Notes:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _symptomNotes!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Build the log/change button
-  Widget _buildLogChangeButton(BuildContext context, Color phaseColor,
-      DateTime previousPeriodStartDate) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 16),
-        child: ElevatedButton(
-          onPressed: () async {
-            // Show options for logging
-            showModalBottomSheet(
-              context: context,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              builder: (context) {
-                return SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Update Period Information',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        ListTile(
-                          leading:
-                              Icon(Icons.calendar_today, color: phaseColor),
-                          title: const Text('Log period start date'),
-                          subtitle: const Text('Set when your period started'),
-                          onTap: () async {
-                            Navigator.pop(context);
-
-                            final DateTime? result = await showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return DashboardDialogs.buildPeriodLogDialog(
-                                    context,
-                                    previousPeriodStartDate,
-                                    phaseColor);
-                              },
-                            );
-                            if (result != null) {
-                              // Update the last period date and navigate to updated dashboard
-                              _handlePeriodDateUpdate(result);
-                            }
-                          },
-                        ),
-                        const Divider(),
-                        ListTile(
-                          leading: Icon(Icons.check_circle_outline,
-                              color: phaseColor),
-                          title: const Text('My period started today'),
-                          subtitle:
-                              const Text('Set today as your period start'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            // Update the last period date to today
-                            _handlePeriodDateUpdate(DateTime.now());
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: phaseColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-          ),
-          child: const Text('Log/Change', style: TextStyle(fontSize: 16)),
-        ),
-      ),
-    );
-  }
-
-  // Build the add symptoms button
-  Widget _buildAddSymptomsButton(BuildContext context, Color phaseColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 16),
-        child: OutlinedButton(
-          onPressed: () {
-            _navigateToSymptomsScreen(context, phaseColor);
-          },
-          style: OutlinedButton.styleFrom(
-            foregroundColor: phaseColor,
-            side: BorderSide(color: phaseColor),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-          ),
-          child: const Text('+ ADD SYMPTOMS', style: TextStyle(fontSize: 14)),
-        ),
-      ),
-    );
-  }
-
-  // Build the predicted symptoms section
-  Widget _buildPredictedSymptomsSection(
-      BuildContext context, String currentPhase, Color phaseColor) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Common symptoms during $currentPhase:',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: CycleUtils.getPhaseSymptoms(currentPhase).map((symptom) {
-              return Chip(
-                label: Text(symptom),
-                backgroundColor: phaseColor.withAlpha(51),
-                side: BorderSide(color: phaseColor.withAlpha(128)),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Method to show account options
-  void _showAccountOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.pink[100],
-                  child: const Icon(
-                    Icons.person,
-                    size: 40,
-                    color: Colors.pink,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  widget.name ?? 'User',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  widget.email ?? 'No email provided',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('Settings'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Navigate to the Settings screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SettingsScreen(
-                          name: widget.name,
-                          email: widget.email,
-                          periodLength: widget.periodLength,
-                          cycleLength: widget.cycleLength,
-                          dateOfBirth: widget.dateOfBirth,
-                          lastPeriodDate: widget.lastPeriodDate,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Log Out',
-                      style: TextStyle(color: Colors.red)),
-                  onTap: () async {
-                    Navigator.pop(
-                        context); // Закрываем текущее меню (если оно есть)
-                    await signOut(); // Дожидаемся выхода пользователя
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/welcome',
-                      (route) => false,
-                    ); // Переходим на экран приветствия, удаляя историю навигации
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Updated method to handle symptoms navigation and return values
-  void _navigateToSymptomsScreen(BuildContext context, Color phaseColor) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SymptomsScreen(
-          phaseColor: phaseColor,
-        ),
-      ),
-    );
-
-    if (result != null && mounted) {
-      // Extract symptoms and notes from result
-      if (result is Map<String, dynamic>) {
-        List<String> symptoms = List<String>.from(result['symptoms'] ?? []);
-        String notes = result['notes'] ?? '';
-
-        // Update the dashboard with the new symptoms
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DashboardScreen(
-              name: widget.name,
-              email: widget.email,
-              periodLength: widget.periodLength,
-              cycleLength: widget.cycleLength,
-              dateOfBirth: widget.dateOfBirth,
-              lastPeriodDate: widget.lastPeriodDate,
-              loggedSymptoms: symptoms,
-              symptomNotes: notes,
-            ),
-          ),
-        );
-
-        // Show a snackbar with the result
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Symptoms saved successfully'),
-            backgroundColor: phaseColor,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
-  // Helper method to handle period date updates
   void _handlePeriodDateUpdate(DateTime newPeriodDate) {
-    // Show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Period start date updated'),
@@ -716,7 +272,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
     );
 
-    // Navigate to updated screen with new period date
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -732,19 +287,5 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ),
     );
-  }
-
-  Future<void> signOut() async {}
-}
-
-class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      print("Ошибка выхода: $e");
-    }
   }
 }

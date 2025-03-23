@@ -157,7 +157,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               'Error parsing periodLength or cycleLength: $e');
                           // Вы можете показать сообщение об ошибке пользователю
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                                 content: Text(
                                     'Invalid period length or cycle length')),
                           );
@@ -338,5 +338,5 @@ String extractDigits(String input) {
   if (match != null) {
     return match.group(0)!;
   }
-  throw FormatException('No digits found in input');
+  throw const FormatException('No digits found in input');
 }

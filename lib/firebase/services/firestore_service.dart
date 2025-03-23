@@ -25,7 +25,7 @@ class FirestoreService {
       });
     } catch (e) {
       print('Error saving user data to Firestore: $e');
-      throw e;
+      rethrow;
     }
   }
 

@@ -1,19 +1,15 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:my_period_tracker/firebase_options.dart';
-import 'package:my_period_tracker/firebase/services/auth_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:my_period_tracker/screen/welcome_screen.dart';
 import 'package:my_period_tracker/screen/registration_screen.dart';
 import 'package:my_period_tracker/screen/login_screen.dart';
-import 'package:my_period_tracker/screen/dashboard_screen.dart'
-    hide AuthService;
+import 'package:my_period_tracker/screen/dashboard_screen.dart';
+import 'package:my_period_tracker/screen/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp();
   runApp(const PeriodTrackerApp());
 }
 
@@ -26,32 +22,6 @@ class PeriodTrackerApp extends StatelessWidget {
       title: 'Period Tracker',
       theme: ThemeData(
         primarySwatch: Colors.pink,
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 0,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.pink,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.pink,
-            side: const BorderSide(color: Colors.pink),
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-          ),
-        ),
       ),
       home: const AuthGate(),
       routes: {
@@ -64,6 +34,14 @@ class PeriodTrackerApp extends StatelessWidget {
                   DateTime.now().subtract(const Duration(days: 15)),
             ),
         '/login': (context) => const LoginScreen(),
+        '/settings': (context) => SettingsScreen(
+              name: '',
+              email: '',
+              periodLength: '',
+              cycleLength: '',
+              dateOfBirth: DateTime.now(),
+              lastPeriodDate: DateTime.now().subtract(const Duration(days: 15)),
+            ),
       },
     );
   }
@@ -75,7 +53,7 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: AuthService().authStateChanges,
+      stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.active) {
           final User? user = snapshot.data;
@@ -83,6 +61,8 @@ class AuthGate extends StatelessWidget {
             return const WelcomeScreen();
           } else {
             return DashboardScreen(
+              name: user.displayName,
+              email: user.email,
               periodLength: '',
               cycleLength: '',
               dateOfBirth: DateTime.now(),
